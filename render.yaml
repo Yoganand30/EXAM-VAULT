@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: exam-vault2
+    env: python
+    plan: free
+    runtime: python
+    buildCommand: |
+      pip install -r requirements.txt
+      python manage.py collectstatic --no-input
+      python manage.py migrate
+    startCommand: gunicorn clgproject.wsgi:application
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: clgproject.settings
+      - key: DATABASE_URL
+        value: your_postgres_url_herepostgresql://examvault_db_user:SRoymGOhuzBFpTx3dCYFbuKAlOdFnQH3@dpg-d1qehlbe5dus73e68emg-a/examvault_db
+      - key: DJANGO_DEBUG
+        value: False
