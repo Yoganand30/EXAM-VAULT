@@ -27,17 +27,21 @@ export const uploadPaper = (id, file) => {
 export const getTeacherFinalPapers = () =>
   client.get("teacher/final-papers/");
 
-// COE
-export const listRequests = () => client.get("coe/requests/");
+// COE - endpoints used in COE.jsx
+export const coeGetTeachers = (payload) =>
+  client.post("coe/teachers/", payload);
 
-export const createRequest = (payload) => {
-  // payload: { teacher_username, s_code, deadline, syllabus(File), q_pattern(File) }
-  const form = new FormData();
-  Object.keys(payload).forEach((k) => form.append(k, payload[k]));
-  return client.post("coe/requests/create/", form);
-};
+export const coeCreateRequest = (formData) =>
+  client.post("coe/requests/add/", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
 
-export const finalizeRequest = (id) =>
+export const coeListRequests = () => client.get("coe/requests/");
+
+export const coeGetCandidates = (s_code) =>
+  client.get(`coe/candidates/?s_code=${encodeURIComponent(s_code)}`);
+
+export const coeFinalize = (id) =>
   client.post(`coe/requests/${id}/finalize/`);
 
 // Superintendent

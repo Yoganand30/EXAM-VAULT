@@ -1,96 +1,203 @@
-import { useEffect, useState } from "react";
-import NavBar from "../components/NavBar";
+import React, { useEffect, useState } from "react";
 import {
-  // NEW endpoints per original dashboard
   getTeacherPending,
   getTeacherAccepted,
   acceptRequest,
+  rejectRequest,
   uploadPaper,
-} from "./teacher_api";
+} from "../api/teacher_api";
 
-export default function Teacher() {
-  const role = localStorage.getItem("role");
-  const [pending, setPending] = useState([]);
-  const [accepted, setAccepted] = useState([]);
-  const [uploading, setUploading] = useState({}); // id -> bool
+const Teacher = () => {
+  const [pendingRequests, setPendingRequests] = useState([]);
+  const [acceptedRequests, setAcceptedRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const load = async () => {
-    const p = await getTeacherPending();
-    const a = await getTeacherAccepted();
-    setPending(p);
-    setAccepted(a);
-  };
-
-  useEffect(() => { load(); }, []);
-
-  const doAccept = async (id) => {
-    await acceptRequest(id);
-    await load();
-  };
-
-  const doUpload = async (id, file) => {
-    setUploading({ ...uploading, [id]: true });
+  const fetchRequests = async () => {
+    setLoading(true);
     try {
-      await uploadPaper(id, file);
-      await load();
-      alert("Uploaded & recorded on chain");
-    } catch (e) {
-      alert("Upload failed");
+      const pending = await getTeacherPending();
+      const accepted = await getTeacherAccepted();
+      setPendingRequests(pending);
+      setAcceptedRequests(accepted);
+    } catch (err) {
+      console.error("Error fetching teacher requests:", err);
     } finally {
-      setUploading({ ...uploading, [id]: false });
+      setLoading(false);
     }
   };
 
-  const onLogout = () => {
-    localStorage.clear();
-    window.location.href = "/login";
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
+  const handleAccept = async (id) => {
+    try {
+      await acceptRequest(id);
+      fetchRequests();
+    } catch (e) {
+      console.error(e);
+      alert("Accept failed");
+    }
   };
 
-  return (
-    <div>
-      <NavBar role={role} onLogout={onLogout} />
-      <div className="p-6 grid gap-8 md:grid-cols-2">
-        {/* Pending Requests */}
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Pending Requests</h2>
-          <div className="space-y-3">
-            {pending.length === 0 && <div className="text-sm text-gray-500">No pending requests.</div>}
-            {pending.map(r => (
-              <div key={r.id} className="border p-3 rounded">
-                <div className="text-sm">Subject Code: {r.s_code}</div>
-                <div className="text-sm">Deadline: {r.deadline}</div>
-                <div className="text-sm">Status: {r.status}</div>
-                <button className="mt-2 px-3 py-1 bg-black text-white rounded" onClick={()=>doAccept(r.id)}>
-                  Accept
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
+  const handleReject = async (id) => {
+    try {
+      await rejectRequest(id);
+      fetchRequests();
+    } catch (e) {
+      console.error(e);
+      alert("Reject failed");
+    }
+  };
 
-        {/* Accepted / Uploaded (no final papers list) */}
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Accepted / Uploaded</h2>
-          <div className="space-y-3">
-            {accepted.length === 0 && <div className="text-sm text-gray-500">None.</div>}
-            {accepted.map(r => (
-              <div key={r.id} className="border p-3 rounded">
-                <div className="text-sm">Subject Code: {r.s_code}</div>
-                <div className="text-sm">Status: {r.status}</div>
-                {r.status === "Accepted" && (
-                  <div className="mt-2">
-                    <input type="file" onChange={(e)=>doUpload(r.id, e.target.files[0])} />
-                    {uploading[r.id] && <div className="text-xs mt-1">Uploading...</div>}
-                  </div>
-                )}
-                {r.status !== "Accepted" && (
-                  <div className="text-xs mt-1 italic">No action required</div>
-                )}
-              </div>
-            ))}
-          </div>
+  const handleUpload = async (id, file) => {
+    if (!file) {
+      alert("Choose file to upload");
+      return;
+    }
+    try {
+      await uploadPaper(id, file);
+      alert("Uploaded");
+      fetchRequests();
+    } catch (e) {
+      console.error(e);
+      alert("Upload failed");
+    }
+  };
+
+  const handleLogout = () => {
+    // You can clear tokens/localStorage here
+    localStorage.removeItem("token");
+    window.location.href = "/login"; // redirect to login
+  };
+
+  const RequestCard = ({ req, type }) => (
+    <div className="bg-white shadow rounded-xl p-5 border border-gray-200 mb-4">
+      <h4 className="text-lg font-semibold text-gray-700 mb-2">
+        {req.subject} ({req.subject_code || req.s_code})
+      </h4>
+      <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
+        <p><span className="font-medium">Course:</span> {req.course}</p>
+        <p><span className="font-medium">Semester:</span> {req.semester}</p>
+        <p><span className="font-medium">Branch:</span> {req.branch}</p>
+        <p><span className="font-medium">Total Marks:</span> {req.total_marks}</p>
+        <p><span className="font-medium">Deadline:</span> {req.deadline}</p>
+        <p><span className="font-medium">Status:</span> {req.status}</p>
+      </div>
+
+      <div className="mt-3 text-sm">
+        <p>
+          <span className="font-medium">Syllabus: </span>
+          {req.syllabus_url ? (
+            <a
+              href={req.syllabus_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline"
+            >
+              📄 View
+            </a>
+          ) : (
+            "Not uploaded"
+          )}
+        </p>
+        <p>
+          <span className="font-medium">Question Pattern: </span>
+          {req.q_pattern_url ? (
+            <a
+              href={req.q_pattern_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline"
+            >
+              📄 View
+            </a>
+          ) : (
+            "Not uploaded"
+          )}
+        </p>
+      </div>
+
+      {type === "pending" && req.status === "Pending" && (
+        <div className="mt-4 flex gap-3">
+          <button
+            onClick={() => handleAccept(req.id)}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+          >
+            Accept
+          </button>
+          <button
+            onClick={() => handleReject(req.id)}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+          >
+            Reject
+          </button>
         </div>
+      )}
+
+      {type === "accepted" && req.status === "Accepted" && (
+        <div className="mt-4">
+          <input
+            type="file"
+            className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4
+                       file:rounded-lg file:border-0 file:text-sm file:font-semibold
+                       file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            onChange={(e) => handleUpload(req.id, e.target.files[0])}
+          />
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="bg-gray-50 min-h-screen">
+      {/* Top Navbar */}
+      <nav className="bg-white shadow p-4 flex justify-between items-center">
+        <h2 className="text-xl font-bold text-gray-800">EXAM-VAULT</h2>
+        <div className="flex items-center gap-4">
+          <span className="text-gray-600">Role: <span className="font-medium">Teacher</span></span>
+          <button
+            onClick={handleLogout}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+          >
+            Logout
+          </button>
+        </div>
+      </nav>
+
+      <div className="p-6">
+        {loading ? (
+          <p className="text-gray-500">Loading...</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Pending Requests */}
+            <div>
+              <h3 className="text-xl font-semibold text-gray-700 mb-3">📌 Pending Requests</h3>
+              {pendingRequests.length === 0 ? (
+                <p className="text-gray-500">No pending requests.</p>
+              ) : (
+                pendingRequests.map((req) => (
+                  <RequestCard key={req.id} req={req} type="pending" />
+                ))
+              )}
+            </div>
+
+            {/* Accepted Requests */}
+            <div>
+              <h3 className="text-xl font-semibold text-gray-700 mb-3">✅ Accepted / Uploaded</h3>
+              {acceptedRequests.length === 0 ? (
+                <p className="text-gray-500">No accepted requests.</p>
+              ) : (
+                acceptedRequests.map((req) => (
+                  <RequestCard key={req.id} req={req} type="accepted" />
+                ))
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
-}
+};
+
+export default Teacher;

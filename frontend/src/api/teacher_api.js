@@ -1,4 +1,4 @@
-import client from "../api/client";
+import client from "./client";
 
 export const getTeacherPending = async () => {
   const { data } = await client.get("teacher/requests/pending/");
@@ -12,6 +12,9 @@ export const getTeacherAccepted = async () => {
 
 export const acceptRequest = (id) =>
   client.post(`teacher/requests/${id}/accept/`);
+
+export const rejectRequest = (id) =>
+  client.post(`teacher/requests/${id}/reject/`);
 
 export const uploadPaper = (id, file) => {
   const form = new FormData();
