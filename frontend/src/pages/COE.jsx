@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import NavBar from "../components/NavBar";
+import ScrutinyDashboard from "../components/ScrutinyDashboard";
 import {
   coeGetTeachers,
   coeCreateRequest,
@@ -33,6 +34,7 @@ export default function COE() {
   const [selectedCandidateId, setSelectedCandidateId] = useState(null);
 
   const [requests, setRequests] = useState([]);
+  const [activeTab, setActiveTab] = useState("requests"); // New state for tab management
 
   const loadRequests = async () => {
     try {
@@ -152,84 +154,119 @@ export default function COE() {
     <div>
       <NavBar role={role} onLogout={onLogout} />
 
-      <div className="p-6 grid gap-8 md:grid-cols-2">
-        {/* Left Panel */}
-        <div className="border p-6 rounded shadow-sm">
-          <h2 className="text-2xl font-semibold text-center mb-4">Send Request</h2>
+      {/* Tab Navigation */}
+      <div className="border-b border-gray-200">
+        <nav className="flex space-x-8 px-6 pt-6">
+          <button
+            onClick={() => setActiveTab("requests")}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === "requests"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            Request Management
+          </button>
+          <button
+            onClick={() => setActiveTab("scrutiny")}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === "scrutiny"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            Scrutiny Dashboard
+          </button>
+        </nav>
+      </div>
 
-          <div className="grid grid-cols-1 gap-3">
-            <label className="text-sm">Course</label>
-            <select className="border p-2" value={course} onChange={(e) => setCourse(e.target.value)}>
-              <option>None</option><option>B.E.</option><option>M.E.</option>
-            </select>
+      {/* Tab Content */}
+      {activeTab === "requests" && (
+        <div className="p-6 grid gap-8 md:grid-cols-2">
+          {/* Left Panel */}
+          <div className="border p-6 rounded shadow-sm">
+            <h2 className="text-2xl font-semibold text-center mb-4">Send Request</h2>
 
-            <label className="text-sm">Semester</label>
-            <select className="border p-2" value={semester} onChange={(e) => setSemester(e.target.value)}>
-              <option>None</option><option>I</option><option>II</option><option>III</option><option>IV</option>
-              <option>V</option><option>VI</option><option>VII</option><option>VIII</option>
-            </select>
+            <div className="grid grid-cols-1 gap-3">
+              <label className="text-sm">Course</label>
+              <select className="border p-2" value={course} onChange={(e) => setCourse(e.target.value)}>
+                <option>None</option><option>B.E.</option><option>M.E.</option>
+              </select>
 
-            <label className="text-sm">Branch</label>
-            <select className="border p-2" value={branch} onChange={(e) => setBranch(e.target.value)}>
-              <option>None</option><option>CSE</option><option>IT</option><option>ECE</option><option>EEE</option>
-              <option>MECH</option><option>BioTech</option>
-            </select>
+              <label className="text-sm">Semester</label>
+              <select className="border p-2" value={semester} onChange={(e) => setSemester(e.target.value)}>
+                <option>None</option><option>I</option><option>II</option><option>III</option><option>IV</option>
+                <option>V</option><option>VI</option><option>VII</option><option>VIII</option>
+              </select>
 
-            <label className="text-sm">Subject</label>
-            <select className="border p-2" value={subject} onChange={(e) => setSubject(e.target.value)}>
-              <option>None</option><option>Internet of Things</option><option>Parallel Computing</option>
-              <option>Cryptography</option><option>Big Data Analytics</option>
-            </select>
+              <label className="text-sm">Branch</label>
+              <select className="border p-2" value={branch} onChange={(e) => setBranch(e.target.value)}>
+                <option>None</option><option>CSE</option><option>IT</option><option>ECE</option><option>EEE</option>
+                <option>MECH</option><option>BioTech</option>
+              </select>
 
-            <div className="mt-2 flex gap-3">
-              <button className="bg-blue-600 text-white px-4 py-2 rounded" onClick={handleSubmitSearch}>Submit</button>
-              <button
-                className={`px-4 py-2 rounded ${uploadedRequestIds.length>0 ? "bg-indigo-600 text-white":"bg-gray-300 text-gray-600 cursor-not-allowed"}`}
-                onClick={() => uploadedRequestIds.length>0 && handleOpenFinalize()}
-              >Finalize</button>
-              <button className="px-4 py-2 bg-gray-700 text-white rounded" onClick={loadRequests}>Refresh</button>
-            </div>
+              <label className="text-sm">Subject</label>
+              <select className="border p-2" value={subject} onChange={(e) => setSubject(e.target.value)}>
+                <option>None</option><option>Internet of Things</option><option>Parallel Computing</option>
+                <option>Cryptography</option><option>Big Data Analytics</option>
+              </select>
 
-            {scode && <div className="text-sm mt-2">Subject Code: <b>{scode}</b></div>}
-
-            <div className="mt-3">
-              <label className="text-sm">Available Teachers</label>
-              {teachers.length === 0 && <div className="text-sm text-gray-500 mt-2">No teachers available</div>}
-              <div className="space-y-2 mt-2">
-                {teachers.map((t) => (
-                  <div key={t.id} className="flex items-center justify-between border p-3 rounded">
-                    <div>{t.first_name} {t.last_name} ({t.username})</div>
-                    <div>
-                      <button className="px-3 py-1 bg-green-600 text-white rounded" onClick={() => openSendRequestModal(t)}>Send Request</button>
-                    </div>
-                  </div>
-                ))}
+              <div className="mt-2 flex gap-3">
+                <button className="bg-blue-600 text-white px-4 py-2 rounded" onClick={handleSubmitSearch}>Submit</button>
+                <button
+                  className={`px-4 py-2 rounded ${uploadedRequestIds.length>0 ? "bg-indigo-600 text-white":"bg-gray-300 text-gray-600 cursor-not-allowed"}`}
+                  onClick={() => uploadedRequestIds.length>0 && handleOpenFinalize()}
+                >Finalize</button>
+                <button className="px-4 py-2 bg-gray-700 text-white rounded" onClick={loadRequests}>Refresh</button>
               </div>
-            </div>
-          </div>
-        </div>
 
-        {/* Right Panel */}
-        <div className="p-4">
-          <h2 className="text-2xl font-semibold text-center mb-4">Request Status</h2>
-          <div className="space-y-3">
-            {Object.keys(grouped).length===0 && <div className="text-sm text-gray-500">No requests yet</div>}
-            {Object.keys(grouped).map((s_code) => (
-              <div key={s_code} className="border p-4 rounded">
-                <div className="text-lg font-medium">{s_code}</div>
-                <div className="mt-2 space-y-2">
-                  {grouped[s_code].map((r) => (
-                    <div key={r.id} className="flex justify-between items-center border p-2 rounded">
-                      <div>{r.teacher_first_name} {r.teacher_last_name} ({r.tusername})</div>
-                      <div className="text-sm"><span className="px-3 py-1 rounded bg-gray-100">{r.status}</span></div>
+              {scode && <div className="text-sm mt-2">Subject Code: <b>{scode}</b></div>}
+
+              <div className="mt-3">
+                <label className="text-sm">Available Teachers</label>
+                {teachers.length === 0 && <div className="text-sm text-gray-500 mt-2">No teachers available</div>}
+                <div className="space-y-2 mt-2">
+                  {teachers.map((t) => (
+                    <div key={t.id} className="flex items-center justify-between border p-3 rounded">
+                      <div>{t.first_name} {t.last_name} ({t.username})</div>
+                      <div>
+                        <button className="px-3 py-1 bg-green-600 text-white rounded" onClick={() => openSendRequestModal(t)}>Send Request</button>
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
-            ))}
+            </div>
+          </div>
+
+          {/* Right Panel */}
+          <div className="p-4">
+            <h2 className="text-2xl font-semibold text-center mb-4">Request Status</h2>
+            <div className="space-y-3">
+              {Object.keys(grouped).length===0 && <div className="text-sm text-gray-500">No requests yet</div>}
+              {Object.keys(grouped).map((s_code) => (
+                <div key={s_code} className="border p-4 rounded">
+                  <div className="text-lg font-medium">{s_code}</div>
+                  <div className="mt-2 space-y-2">
+                    {grouped[s_code].map((r) => (
+                      <div key={r.id} className="flex justify-between items-center border p-2 rounded">
+                        <div>{r.teacher_first_name} {r.teacher_last_name} ({r.tusername})</div>
+                        <div className="text-sm"><span className="px-3 py-1 rounded bg-gray-100">{r.status}</span></div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {activeTab === "scrutiny" && (
+        <div className="p-6">
+          <ScrutinyDashboard />
+        </div>
+      )}
 
       {/* Send Request Modal */}
       {isSendModalOpen && targetTeacher && (
@@ -287,18 +324,80 @@ export default function COE() {
               <button className="text-gray-600" onClick={()=>setFinalizeModalOpen(false)}>✕</button>
             </div>
 
-            <div className="max-h-[300px] overflow-auto space-y-3">
+            <div className="max-h-[400px] overflow-auto space-y-3">
               {candidatePapers.length===0 && <div className="text-sm text-gray-500">No uploaded papers</div>}
-              {candidatePapers.map((mp) => (
-                <div key={mp.id} className="flex items-center gap-3 border p-3 rounded">
-                  <input type="radio" name="candidate" value={mp.id} checked={selectedCandidateId===mp.id} onChange={()=>setSelectedCandidateId(mp.id)} />
-                  <div className="flex-1">
-                    <div className="font-medium">{mp.paper_number}</div>
-                    {mp.syllabus_url && <a href={mp.syllabus_url} target="_blank" className="text-blue-600 underline text-sm">Syllabus</a>}
-                    {mp.q_pattern_url && <a href={mp.q_pattern_url} target="_blank" className="text-blue-600 underline text-sm ml-2">Q Pattern</a>}
+              {candidatePapers.map((mp) => {
+                const scrutiny = mp.scrutiny || {};
+                const getQualityColor = (status) => {
+                  switch (status) {
+                    case "excellent": return "text-green-600 bg-green-100";
+                    case "good": return "text-blue-600 bg-blue-100";
+                    case "fair": return "text-yellow-600 bg-yellow-100";
+                    case "poor": return "text-red-600 bg-red-100";
+                    default: return "text-gray-600 bg-gray-100";
+                  }
+                };
+                
+                return (
+                  <div key={mp.id} className="border p-4 rounded-lg hover:bg-gray-50">
+                    <div className="flex items-start gap-3">
+                      <input 
+                        type="radio" 
+                        name="candidate" 
+                        value={mp.id} 
+                        checked={selectedCandidateId===mp.id} 
+                        onChange={()=>setSelectedCandidateId(mp.id)}
+                        className="mt-1"
+                      />
+                      <div className="flex-1">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <div className="font-medium text-lg">{mp.paper_number}</div>
+                            <div className="text-sm text-gray-600">by {mp.teacher_name}</div>
+                          </div>
+                          
+                          {/* Scrutiny Score */}
+                          {scrutiny.has_scrutiny && (
+                            <div className="text-right">
+                              <div className={`px-3 py-1 rounded-full text-sm font-bold ${getQualityColor(scrutiny.quality_status)}`}>
+                                {scrutiny.overall_score_display}
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1 capitalize">
+                                {scrutiny.quality_status}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Scrutiny Details */}
+                        {scrutiny.has_scrutiny && (
+                          <div className="grid grid-cols-2 gap-4 mt-3 p-3 bg-gray-50 rounded">
+                            <div>
+                              <div className="text-sm font-medium">Questions: {scrutiny.num_questions}</div>
+                              <div className="text-sm font-medium">Plagiarism: {Math.round(scrutiny.plagiarism_score * 100)}%</div>
+                            </div>
+                            <div>
+                              {scrutiny.recommendations && scrutiny.recommendations.length > 0 && (
+                                <div className="text-sm">
+                                  <div className="font-medium text-red-600">Issues:</div>
+                                  <ul className="text-xs text-gray-600">
+                                    {scrutiny.recommendations.slice(0, 2).map((rec, idx) => (
+                                      <li key={idx}>• {rec}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* File Links */}
+                        
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="mt-4 flex justify-end gap-3">

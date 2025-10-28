@@ -1,4 +1,5 @@
 import os
+import logging
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
@@ -22,6 +23,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "corsheaders",
     "exams",
+    "scrutiny",  # new app for automatic scrutiny
 ]
 
 MIDDLEWARE = [
@@ -102,13 +104,43 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# Ensure dirs exist
+os.makedirs(MEDIA_ROOT, exist_ok=True)
+
+# Upload size limits (adjust as needed)
+DATA_UPLOAD_MAX_MEMORY_SIZE = int(os.getenv("DATA_UPLOAD_MAX_MEMORY_SIZE", 50 * 1024 * 1024))  # 50 MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = int(os.getenv("FILE_UPLOAD_MAX_MEMORY_SIZE", 50 * 1024 * 1024))  # 50 MB
+
 # Encryption folder
 ENCRYPTION_ROOT = MEDIA_ROOT / "encryption_keys"
 ENCRYPTION_ROOT.mkdir(parents=True, exist_ok=True)
 
 # IPFS / Blockchain environment
 IPFS_HOST = os.getenv("IPFS_HOST", "127.0.0.1")
-IPFS_PORT = int(os.getenv("IPFS_PORT", "5001"))
+IPFS_PORT = int(os.getenv("IPFS_PORT", "5003"))
 RPC_URL = os.getenv("RPC_URL", "http://127.0.0.1:7545")
 PRIVATE_KEY = os.getenv("PRIVATE_KEY")
 CONTRACT_ADDRESS = os.getenv("CONTRACT_ADDRESS")
+
+# Logging - prints to console (development friendly)
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {"class": "logging.StreamHandler",},
+    },
+    "formatters": {
+        "simple": {"format": "%(asctime)s %(levelname)s %(name)s %(message)s"},
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "DEBUG" if DEBUG else "INFO",
+    },
+    "loggers": {
+        "django": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "exams": {"handlers": ["console"], "level": "DEBUG", "propagate": True},
+        "scrutiny": {"handlers": ["console"], "level": "DEBUG", "propagate": True},
+    },
+}
+
+# End of settings.py

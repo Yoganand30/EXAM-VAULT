@@ -48,5 +48,15 @@ export const coeFinalize = (id) =>
 export const listFinalPapers = () =>
   client.get("sup/final-papers/");
 
+// Scrutiny API endpoints
+export const scrutinyGetResults = () =>
+  client.get("scrutiny/results/");
+
+export const scrutinyGetSummary = () =>
+  client.get("scrutiny/summary/");
+
+export const scrutinyGetDetail = (requestId) =>
+  client.get(`scrutiny/detail/${requestId}/`);
+
 export const getDecryptInfo = (paper_id) =>
   client.get(`sup/final-papers/${paper_id}/decrypt-info/`);

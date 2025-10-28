@@ -6,20 +6,20 @@ export default function Login() {
   const [username, setU] = useState("");
   const [password, setP] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const nav = useNavigate();
 
   const submit = async (e) => {
     e.preventDefault();
     setError("");
+    setLoading(true);
     try {
       const { data } = await login(username, password);
 
       const access = data.access || (data.tokens && data.tokens.access);
       const refresh = data.refresh || (data.tokens && data.tokens.refresh);
 
-      if (!access || !refresh) {
-        throw new Error("Invalid login response from server");
-      }
+      if (!access || !refresh) throw new Error("Invalid login response from server");
 
       localStorage.setItem("access", access);
       localStorage.setItem("refresh", refresh);
@@ -32,50 +32,106 @@ export default function Login() {
     } catch (err) {
       console.error("Login failed:", err);
       setError("Invalid username or password");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-      <div className="w-full max-w-md bg-white shadow-lg rounded-2xl p-8">
-        <h1 className="text-3xl font-bold text-gray-800 text-center mb-6">
-          EXAM-VAULT 
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-purple-700 via-purple-600 to-purple-500 text-white">
+      
+      {/* College Header */}
+      <div className="text-center mb-8">
+        <img
+          src="/bit_logo.png"
+          alt="Bangalore Institute of Technology Logo"
+          className="mx-auto w-28 h-28 mb-3 drop-shadow-lg"
+        />
+        <h1 className="text-3xl md:text-4xl font-extrabold uppercase text-white drop-shadow-md">
+          Bangalore Institute of Technology
         </h1>
-        <form onSubmit={submit} className="space-y-4">
-          {error && (
-            <div className="text-red-600 text-sm text-center bg-red-50 border border-red-200 p-2 rounded">
-              {error}
-            </div>
-          )}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Username
-            </label>
-            <input
-              className="border w-full p-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-              placeholder="Enter your username"
-              value={username}
-              onChange={(e) => setU(e.target.value)}
-            />
+        <p className="text-purple-200 mt-1 text-sm md:text-base">
+          Department of Computer Science and Engineering
+        </p>
+      </div>
+
+      {/* System Title */}
+      <div className="text-center mb-10">
+        <h2 className="text-4xl font-bold tracking-wide text-yellow-400 drop-shadow-lg">
+          EXAM-VAULT
+        </h2>
+        <p className="text-purple-200 mt-1 text-sm md:text-base">
+          Secure Blockchain-Based Examination Management System
+        </p>
+      </div>
+
+      {/* Login Form */}
+      <form
+        onSubmit={submit}
+        className="bg-white text-gray-800 w-11/12 max-w-lg rounded-2xl shadow-2xl p-8 md:p-10 backdrop-blur-lg"
+      >
+        {error && (
+          <div className="text-red-600 text-sm text-center bg-red-50 border border-red-200 p-2 rounded mb-3">
+            {error}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
-            <input
-              className="border w-full p-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-              placeholder="Enter your password"
-              type="password"
-              value={password}
-              onChange={(e) => setP(e.target.value)}
-            />
-          </div>
-          <button
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition"
-          >
-            Sign in
-          </button>
-        </form>
+        )}
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-1 text-gray-700">Username</label>
+          <input
+            className="border w-full p-3 rounded-lg focus:ring-2 focus:ring-purple-600 focus:outline-none"
+            placeholder="Enter your username"
+            value={username}
+            onChange={(e) => setU(e.target.value)}
+            required
+          />
+        </div>
+
+        <div className="mb-6">
+          <label className="block text-sm font-medium mb-1 text-gray-700">Password</label>
+          <input
+            className="border w-full p-3 rounded-lg focus:ring-2 focus:ring-purple-600 focus:outline-none"
+            placeholder="Enter your password"
+            type="password"
+            value={password}
+            onChange={(e) => setP(e.target.value)}
+            required
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg font-semibold transition transform hover:scale-[1.02] disabled:opacity-70"
+        >
+          {loading ? "Signing in..." : "Sign In"}
+        </button>
+
+        {/* Signup + Forgot Password */}
+        <div className="mt-5 text-center text-sm text-gray-600">
+          <p>
+            Don’t have an account?{" "}
+            <button
+              onClick={() => nav("/signup")}
+              className="text-purple-600 hover:text-purple-800 font-medium underline"
+            >
+              Sign Up
+            </button>
+          </p>
+          <p className="mt-2">
+            <button
+              onClick={() => nav("/forgot-password")}
+              className="text-purple-500 hover:text-purple-700 underline"
+            >
+              Forgot Password?
+            </button>
+          </p>
+        </div>
+      </form>
+
+      {/* Footer */}
+      <div className="mt-10 text-center text-purple-200 text-xs">
+        © {new Date().getFullYear()} Bangalore Institute of Technology | Developed by Department of CSE
       </div>
     </div>
   );
