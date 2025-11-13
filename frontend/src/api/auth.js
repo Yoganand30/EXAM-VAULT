@@ -58,5 +58,8 @@ export const scrutinyGetSummary = () =>
 export const scrutinyGetDetail = (requestId) =>
   client.get(`scrutiny/detail/${requestId}/`);
 
+export const scrutinySyncVTU = (payload) =>
+  client.post("scrutiny/vtu-sync/", payload);
+
 export const getDecryptInfo = (paper_id) =>
   client.get(`sup/final-papers/${paper_id}/decrypt-info/`);

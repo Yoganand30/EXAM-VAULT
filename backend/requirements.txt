@@ -14,6 +14,9 @@ nltk>=3.8.0
 scikit-learn>=1.3.0
 numpy>=1.24.0
 
+# HTML parsing and scraping
+beautifulsoup4>=4.12.0
+
 # IPFS and blockchain
 requests>=2.31.0
 web3>=6.0.0

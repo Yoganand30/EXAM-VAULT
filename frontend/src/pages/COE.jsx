@@ -208,7 +208,7 @@ export default function COE() {
               <label className="text-sm">Subject</label>
               <select className="border p-2" value={subject} onChange={(e) => setSubject(e.target.value)}>
                 <option>None</option><option>Internet of Things</option><option>Parallel Computing</option>
-                <option>Cryptography</option><option>Big Data Analytics</option>
+                <option>Cryptography</option><option>Big Data Analytics</option><option>MACHINE LEARNING</option><option>CLOUD COMPUTING  </option>
               </select>
 
               <div className="mt-2 flex gap-3">
@@ -324,80 +324,31 @@ export default function COE() {
               <button className="text-gray-600" onClick={()=>setFinalizeModalOpen(false)}>✕</button>
             </div>
 
-            <div className="max-h-[400px] overflow-auto space-y-3">
+            <div className="max-h-[300px] overflow-auto space-y-3">
               {candidatePapers.length===0 && <div className="text-sm text-gray-500">No uploaded papers</div>}
-              {candidatePapers.map((mp) => {
-                const scrutiny = mp.scrutiny || {};
-                const getQualityColor = (status) => {
-                  switch (status) {
-                    case "excellent": return "text-green-600 bg-green-100";
-                    case "good": return "text-blue-600 bg-blue-100";
-                    case "fair": return "text-yellow-600 bg-yellow-100";
-                    case "poor": return "text-red-600 bg-red-100";
-                    default: return "text-gray-600 bg-gray-100";
-                  }
-                };
-                
-                return (
-                  <div key={mp.id} className="border p-4 rounded-lg hover:bg-gray-50">
-                    <div className="flex items-start gap-3">
-                      <input 
-                        type="radio" 
-                        name="candidate" 
-                        value={mp.id} 
-                        checked={selectedCandidateId===mp.id} 
-                        onChange={()=>setSelectedCandidateId(mp.id)}
-                        className="mt-1"
-                      />
-                      <div className="flex-1">
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <div className="font-medium text-lg">{mp.paper_number}</div>
-                            <div className="text-sm text-gray-600">by {mp.teacher_name}</div>
-                          </div>
-                          
-                          {/* Scrutiny Score */}
-                          {scrutiny.has_scrutiny && (
-                            <div className="text-right">
-                              <div className={`px-3 py-1 rounded-full text-sm font-bold ${getQualityColor(scrutiny.quality_status)}`}>
-                                {scrutiny.overall_score_display}
-                              </div>
-                              <div className="text-xs text-gray-500 mt-1 capitalize">
-                                {scrutiny.quality_status}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Scrutiny Details */}
-                        {scrutiny.has_scrutiny && (
-                          <div className="grid grid-cols-2 gap-4 mt-3 p-3 bg-gray-50 rounded">
-                            <div>
-                              <div className="text-sm font-medium">Questions: {scrutiny.num_questions}</div>
-                              <div className="text-sm font-medium">Plagiarism: {Math.round(scrutiny.plagiarism_score * 100)}%</div>
-                            </div>
-                            <div>
-                              {scrutiny.recommendations && scrutiny.recommendations.length > 0 && (
-                                <div className="text-sm">
-                                  <div className="font-medium text-red-600">Issues:</div>
-                                  <ul className="text-xs text-gray-600">
-                                    {scrutiny.recommendations.slice(0, 2).map((rec, idx) => (
-                                      <li key={idx}>• {rec}</li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                        
-                        {/* File Links */}
-                        
+              {candidatePapers.map((mp) => (
+                <div key={mp.id} className="flex items-start gap-3 border p-3 rounded">
+                  <input type="radio" name="candidate" value={mp.id} checked={selectedCandidateId===mp.id} onChange={()=>setSelectedCandidateId(mp.id)} className="mt-1" />
+                  <div className="flex-1 space-y-1 text-sm">
+                    <div className="font-medium text-base">{mp.paper_number}</div>
+                    {mp.scrutiny ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="px-2 py-1 rounded bg-gray-100 text-gray-700">
+                          Score: <b>{mp.scrutiny.score_percent}%</b> ({mp.scrutiny.quality})
+                        </span>
+                        <span className={`px-2 py-1 rounded ${mp.scrutiny.plagiarism_percent > 30 ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
+                          Plagiarism: {mp.scrutiny.plagiarism_percent}%
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          Scrutinized on {mp.scrutiny.created_at ? new Date(mp.scrutiny.created_at).toLocaleString() : "N/A"}
+                        </span>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="text-gray-500 italic">Scrutiny results not available yet.</div>
+                    )}
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
 
             <div className="mt-4 flex justify-end gap-3">

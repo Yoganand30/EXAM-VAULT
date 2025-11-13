@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { scrutinyGetResults, scrutinyGetSummary } from "../api/auth";
+import { scrutinyGetResults, scrutinyGetSummary, scrutinySyncVTU } from "../api/auth";
 
 export default function ScrutinyDashboard() {
   const [summary, setSummary] = useState(null);
@@ -7,6 +7,13 @@ export default function ScrutinyDashboard() {
   const [loading, setLoading] = useState(true);
   const [selectedResult, setSelectedResult] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [syncForm, setSyncForm] = useState({
+    subject_code: "",
+    syllabus_url: "",
+    question_index_url: "",
+  });
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [syncMessage, setSyncMessage] = useState(null);
 
   const loadScrutinyData = async () => {
     try {
@@ -29,6 +36,41 @@ export default function ScrutinyDashboard() {
     loadScrutinyData();
   }, []);
 
+  const handleSyncChange = (field, value) => {
+    setSyncForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSyncSubmit = async (e) => {
+    e.preventDefault();
+    if (!syncForm.subject_code || !syncForm.syllabus_url) {
+      setSyncMessage({ type: "error", text: "Subject code and syllabus URL are required." });
+      return;
+    }
+    try {
+      setSyncLoading(true);
+      setSyncMessage(null);
+      await scrutinySyncVTU(syncForm);
+      setSyncMessage({
+        type: "success",
+        text: "VTU resources synced successfully. Refreshed defaults will be used in new requests.",
+      });
+      setSyncForm((prev) => ({
+        subject_code: prev.subject_code,
+        syllabus_url: "",
+        question_index_url: "",
+      }));
+      await loadScrutinyData();
+    } catch (error) {
+      console.error("VTU sync failed:", error);
+      setSyncMessage({
+        type: "error",
+        text: error.response?.data?.detail || "Failed to sync VTU resources. Check the URLs and try again.",
+      });
+    } finally {
+      setSyncLoading(false);
+    }
+  };
+
   const getQualityColor = (status) => {
     switch (status) {
       case "excellent": return "text-green-600 bg-green-100";
@@ -40,7 +82,8 @@ export default function ScrutinyDashboard() {
   };
 
   const getScoreColor = (score) => {
-    const numScore = parseInt(score.replace('%', ''));
+    const numericScore = typeof score === "string" ? parseInt(score.replace("%", ""), 10) : Number(score);
+    const numScore = Number.isNaN(numericScore) ? 0 : numericScore;
     if (numScore >= 80) return "text-green-600";
     if (numScore >= 60) return "text-blue-600";
     if (numScore >= 40) return "text-yellow-600";
@@ -73,6 +116,69 @@ export default function ScrutinyDashboard() {
         </button>
       </div>
 
+      {/* VTU Sync Panel */}
+      <div className="border border-gray-200 rounded-lg p-4 mb-6 bg-gray-50">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+          <div>
+            <h3 className="text-lg font-semibold">VTU Resource Sync</h3>
+            <p className="text-sm text-gray-600">
+              Automatically download the official VTU syllabus and latest model question papers
+              for a subject to power scrutiny and plagiarism checks.
+            </p>
+          </div>
+        </div>
+        <form onSubmit={handleSyncSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="flex flex-col">
+            <label className="text-sm font-medium text-gray-700">Subject Code</label>
+            <input
+              type="text"
+              placeholder="e.g., BCS601"
+              className="border rounded px-3 py-2"
+              value={syncForm.subject_code}
+              onChange={(e) => handleSyncChange("subject_code", e.target.value.toUpperCase())}
+            />
+          </div>
+          <div className="flex flex-col md:col-span-2">
+            <label className="text-sm font-medium text-gray-700">Syllabus PDF URL</label>
+            <input
+              type="url"
+              placeholder="https://vtu.ac.in/....pdf"
+              className="border rounded px-3 py-2"
+              value={syncForm.syllabus_url}
+              onChange={(e) => handleSyncChange("syllabus_url", e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col md:col-span-3">
+            <label className="text-sm font-medium text-gray-700">Model Question Paper Index URL (optional)</label>
+            <input
+              type="url"
+              placeholder="https://vtu.ac.in/model-question-paper-b-e-b-tech-b-arch/"
+              className="border rounded px-3 py-2"
+              value={syncForm.question_index_url}
+              onChange={(e) => handleSyncChange("question_index_url", e.target.value)}
+            />
+          </div>
+          <div className="md:col-span-3 flex items-center gap-3">
+            <button
+              type="submit"
+              className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-60"
+              disabled={syncLoading}
+            >
+              {syncLoading ? "Syncing..." : "Sync VTU Resources"}
+            </button>
+            {syncMessage && (
+              <span
+                className={`text-sm ${
+                  syncMessage.type === "success" ? "text-green-600" : "text-red-600"
+                }`}
+              >
+                {syncMessage.text}
+              </span>
+            )}
+          </div>
+        </form>
+      </div>
+
       {/* Summary Cards */}
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -81,7 +187,9 @@ export default function ScrutinyDashboard() {
             <div className="text-sm text-gray-600">Total Papers</div>
           </div>
           <div className="bg-green-50 p-4 rounded-lg">
-            <div className="text-2xl font-bold text-green-600">{summary.average_score}%</div>
+            <div className="text-2xl font-bold text-green-600">
+              {summary.average_score ?? 0}%
+            </div>
             <div className="text-sm text-gray-600">Avg Score</div>
           </div>
           <div className="bg-yellow-50 p-4 rounded-lg">
@@ -270,6 +378,96 @@ export default function ScrutinyDashboard() {
                       <li key={index} className="text-sm text-gray-700">• {rec}</li>
                     ))}
                   </ul>
+                </div>
+              )}
+
+              {/* VTU Module Coverage */}
+              {selectedResult.summary?.syllabus_alignment && (
+                <div>
+                  <label className="font-semibold">VTU Module Coverage:</label>
+                  <div className="mt-2 overflow-x-auto">
+                    <table className="w-full border border-gray-200 text-sm">
+                      <thead className="bg-gray-100">
+                        <tr>
+                          <th className="p-2 border border-gray-200 text-left">Module</th>
+                          <th className="p-2 border border-gray-200 text-left">Coverage</th>
+                          <th className="p-2 border border-gray-200 text-left">Matched Questions</th>
+                          <th className="p-2 border border-gray-200 text-left">Tags</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedResult.summary.syllabus_alignment.module_breakdown.map((module) => (
+                          <tr key={module.module_number}>
+                            <td className="p-2 border border-gray-200">
+                              <div className="font-medium">{module.title}</div>
+                            </td>
+                            <td className={`p-2 border border-gray-200 ${getScoreColor(module.coverage * 100)}`}>
+                              {Math.round((module.coverage || 0) * 100)}%
+                            </td>
+                            <td className="p-2 border border-gray-200">{module.matched_questions}</td>
+                            <td className="p-2 border border-gray-200">
+                              {module.contributing_tags.length === 0 ? (
+                                <span className="text-gray-500">—</span>
+                              ) : (
+                                module.contributing_tags.map((tag) => (
+                                  <span key={tag} className="mr-2 bg-gray-200 rounded px-2 py-1 inline-block">
+                                    {tag}
+                                  </span>
+                                ))
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <div className="text-sm text-gray-600 mt-2">
+                      Average Module Coverage:{" "}
+                      <span className={getScoreColor(selectedResult.summary.syllabus_alignment.average_module_coverage * 100)}>
+                        {Math.round((selectedResult.summary.syllabus_alignment.average_module_coverage || 0) * 100)}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Question-Level Insights */}
+              {selectedResult.summary?.questions && selectedResult.summary.questions.length > 0 && (
+                <div>
+                  <label className="font-semibold">Question-Level Insights:</label>
+                  <div className="mt-3 space-y-3">
+                    {selectedResult.summary.questions.map((question, index) => {
+                      const bloomEntries = Object.entries(question.bloom || {});
+                      const primaryBloom =
+                        bloomEntries.length > 0
+                          ? bloomEntries.reduce((best, current) =>
+                              current[1] > best[1] ? current : best,
+                            bloomEntries[0])[0]
+                          : "N/A";
+                      return (
+                        <div key={index} className="border border-gray-200 rounded p-3">
+                          <div className="flex justify-between items-start gap-3">
+                            <div className="font-medium text-gray-800">Q{index + 1}</div>
+                            <div className="text-xs uppercase tracking-wide bg-gray-200 rounded px-2 py-1">
+                              {primaryBloom}
+                            </div>
+                            <div className={`text-sm font-semibold ${getScoreColor((question.difficulty?.score || 0) * 100)}`}>
+                              {question.difficulty?.level || "N/A"}
+                            </div>
+                          </div>
+                          <div className="mt-2 text-sm text-gray-700">{question.text}</div>
+                          {question.tags && question.tags.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {question.tags.map((tag) => (
+                                <span key={tag} className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 

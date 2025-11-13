@@ -87,27 +87,71 @@ def extract_text_from_pdf(path):
 
 def split_into_questions(text):
     """
-    Very simple heuristic: split on question marks and on numbered lines.
+    Improved question extraction: detects numbered questions, questions ending with ?, 
+    and questions starting with common question words.
     """
     if not text:
         return []
-    # Normalize newlines
+    # Normalize newlines and whitespace
     text = re.sub(r'\r\n', '\n', text)
-    # Split on question marks first
-    parts = [p.strip() + "?" for p in text.split("?") if p.strip()]
-    # Keep only pieces that look like questions or are substantial lines
+    text = re.sub(r'\n+', '\n', text)
+    
     questions = []
-    for p in parts:
-        p = re.sub(r'\s+', ' ', p).strip()
-        if len(p.split()) >= 4 and p.endswith("?"):
-            questions.append(p)
-    # Remove duplicates
-    out = []
+    
+    # Pattern 1: Questions ending with question mark
+    qmark_parts = re.split(r'([^?]+\?)', text)
+    for part in qmark_parts:
+        part = re.sub(r'\s+', ' ', part).strip()
+        if len(part) > 10 and part.endswith('?'):
+            questions.append(part)
+    
+    # Pattern 2: Numbered questions (e.g., "1 a", "2 b", "Module-4 1.", etc.)
+    # Match patterns like: number + optional letter + question text
+    numbered_pattern = re.compile(
+        r'(?:^|\n)(?:Module[-\s]*\d+[^\n]*\n)?\s*(\d+)\s*([a-z])?\s*[\.\)]?\s*([^\n]{20,}?)(?=\n\s*\d+\s*[a-z]?\s*[\.\)]|\n\s*Module[-\s]*\d+|$)',
+        re.IGNORECASE | re.MULTILINE
+    )
+    
+    for match in numbered_pattern.finditer(text):
+        question_num = match.group(1)
+        question_letter = match.group(2) or ''
+        question_text = match.group(3).strip()
+        
+        # Clean up the question text
+        question_text = re.sub(r'\s+', ' ', question_text)
+        question_text = question_text.strip()
+        
+        # Skip if too short or looks like a header
+        if len(question_text) < 15:
+            continue
+        if question_text.lower().startswith(('module', 'or', 'note:', 'total')):
+            continue
+        
+        # Construct full question identifier
+        full_question = f"{question_num}{question_letter}. {question_text}".strip()
+        if len(full_question) > 20:
+            questions.append(full_question)
+    
+    # Pattern 3: Questions starting with common question words (if not already captured)
+    question_starters = r'(?:^|\n)\s*(Explain|Describe|Define|List|Discuss|Compare|Analyze|Evaluate|Design|Apply|Illustrate|Distinguish|Determine|Write|How|What|Why|When|Where)'
+    starter_matches = re.finditer(question_starters + r'[^\n]{20,}', text, re.IGNORECASE | re.MULTILINE)
+    for match in starter_matches:
+        q_text = match.group(0).strip()
+        q_text = re.sub(r'\s+', ' ', q_text)
+        if len(q_text) > 20 and q_text not in questions:
+            questions.append(q_text)
+    
+    # Remove duplicates and very short entries
     seen = set()
+    out = []
     for q in questions:
-        if q not in seen:
-            seen.add(q)
-            out.append(q)
+        q_clean = re.sub(r'\s+', ' ', q).strip()
+        # Normalize for comparison (remove numbers/letters at start)
+        q_normalized = re.sub(r'^\d+[a-z]?\.?\s*', '', q_clean, flags=re.IGNORECASE).lower()
+        if q_normalized not in seen and len(q_clean) > 15:
+            seen.add(q_normalized)
+            out.append(q_clean)
+    
     return out
 
 def classify_bloom_taxonomy(question: str) -> Dict[str, float]:
@@ -314,7 +358,8 @@ def analyze_file(path, existing_questions: List[str] = None):
             "difficulty_distribution": {},
             "plagiarism_analysis": {},
             "overall_score": 0.0,
-            "recommendations": []
+            "recommendations": [],
+            "questions": []
         }
     }
     
@@ -343,6 +388,8 @@ def analyze_file(path, existing_questions: List[str] = None):
         difficulty_scores = []
         all_tags = []
         
+        question_reports = []
+
         for question in questions:
             # Bloom taxonomy classification
             bloom_result = classify_bloom_taxonomy(question)
@@ -355,6 +402,15 @@ def analyze_file(path, existing_questions: List[str] = None):
             # Tag extraction
             tags = extract_question_tags(question)
             all_tags.extend(tags)
+
+            question_reports.append(
+                {
+                    "text": question,
+                    "bloom": bloom_result,
+                    "difficulty": difficulty_result,
+                    "tags": tags,
+                }
+            )
         
         # Calculate distributions
         bloom_distribution = {}
@@ -399,7 +455,8 @@ def analyze_file(path, existing_questions: List[str] = None):
             "plagiarism_analysis": plagiarism_analysis,
             "overall_score": quality_score,
             "recommendations": recommendations,
-            "tags": list(set(all_tags))[:10]  # Top 10 unique tags
+            "tags": list(set(all_tags))[:10],  # Top 10 unique tags
+            "questions": question_reports
         })
         
         return analysis_result

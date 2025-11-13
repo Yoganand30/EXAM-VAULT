@@ -61,7 +61,7 @@ export default function Login() {
           EXAM-VAULT
         </h2>
         <p className="text-purple-200 mt-1 text-sm md:text-base">
-          Secure Blockchain-Based Examination Management System
+         REINVENTING EXAMINATION SECURITY THROUGH BLOCKCHAIN AND ENCRYPTION
         </p>
       </div>
 
@@ -107,26 +107,7 @@ export default function Login() {
           {loading ? "Signing in..." : "Sign In"}
         </button>
 
-        {/* Signup + Forgot Password */}
-        <div className="mt-5 text-center text-sm text-gray-600">
-          <p>
-            Don’t have an account?{" "}
-            <button
-              onClick={() => nav("/signup")}
-              className="text-purple-600 hover:text-purple-800 font-medium underline"
-            >
-              Sign Up
-            </button>
-          </p>
-          <p className="mt-2">
-            <button
-              onClick={() => nav("/forgot-password")}
-              className="text-purple-500 hover:text-purple-700 underline"
-            >
-              Forgot Password?
-            </button>
-          </p>
-        </div>
+       
       </form>
 
       {/* Footer */}

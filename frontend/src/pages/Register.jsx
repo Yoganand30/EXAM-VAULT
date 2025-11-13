@@ -146,6 +146,7 @@ export default function Register() {
             "Parallel Computing",
             "Cryptography",
             "Big Data Analytics",
+            "MACHINE LEARNING",
           ].map((sub) => (
             <option key={sub} value={sub}>
               {sub}

@@ -414,59 +414,40 @@ def COECandidates(request):
     candidates_list = sorted(latest_by_teacher.values(), key=lambda x: x.id)
 
     response = []
+
+    def _quality_status(score: float) -> str:
+        if score >= 0.8:
+            return "excellent"
+        if score >= 0.6:
+            return "good"
+        if score >= 0.4:
+            return "fair"
+        return "poor"
+
     for idx, r in enumerate(candidates_list):
         try:
             u = User.objects.get(username=r.tusername)
             tname = f"{u.first_name} {u.last_name}".strip()
         except User.DoesNotExist:
             tname = r.tusername
-        
-        # Get scrutiny data for this request
-        scrutiny_data = None
-        try:
-            from scrutiny.models import ScrutinyResult
-            scrutiny_result = ScrutinyResult.objects.filter(request_obj=r).first()
-            if scrutiny_result:
-                summary = scrutiny_result.summary
-                scrutiny_data = {
-                    "overall_score": summary.get('overall_score', 0.0),
-                    "overall_score_display": f"{int(summary.get('overall_score', 0.0) * 100)}%",
-                    "quality_status": "excellent" if summary.get('overall_score', 0.0) >= 0.8 else 
-                                    "good" if summary.get('overall_score', 0.0) >= 0.6 else
-                                    "fair" if summary.get('overall_score', 0.0) >= 0.4 else "poor",
-                    "num_questions": summary.get('num_questions', 0),
-                    "plagiarism_score": summary.get('plagiarism_analysis', {}).get('plagiarism_score', 0.0),
-                    "recommendations": summary.get('recommendations', []),
-                    "bloom_distribution": summary.get('bloom_distribution', {}),
-                    "difficulty_distribution": summary.get('difficulty_distribution', {}),
-                    "has_scrutiny": True
+
+        scrutiny_payload = None
+        if ScrutinyResult:
+            scrutiny_obj = ScrutinyResult.objects.filter(request_obj=r).order_by("-created_at").first()
+            if scrutiny_obj:
+                summary = scrutiny_obj.summary or {}
+                overall_score = summary.get("overall_score", 0.0) or 0.0
+                plagiarism_score = summary.get("plagiarism_analysis", {}).get("plagiarism_score", 0.0) or 0.0
+                scrutiny_payload = {
+                    "score": round(overall_score, 2),
+                    "score_percent": round(overall_score * 100, 1),
+                    "quality": _quality_status(overall_score),
+                    "plagiarism_score": round(plagiarism_score, 2),
+                    "plagiarism_percent": round(plagiarism_score * 100, 1),
+                    "summary": summary,
+                    "created_at": scrutiny_obj.created_at,
                 }
-            else:
-                scrutiny_data = {
-                    "overall_score": 0.0,
-                    "overall_score_display": "N/A",
-                    "quality_status": "unknown",
-                    "num_questions": 0,
-                    "plagiarism_score": 0.0,
-                    "recommendations": ["Scrutiny analysis not available"],
-                    "bloom_distribution": {},
-                    "difficulty_distribution": {},
-                    "has_scrutiny": False
-                }
-        except Exception as e:
-            logger.warning(f"Failed to get scrutiny data for request {r.id}: {e}")
-            scrutiny_data = {
-                "overall_score": 0.0,
-                "overall_score_display": "Error",
-                "quality_status": "error",
-                "num_questions": 0,
-                "plagiarism_score": 0.0,
-                "recommendations": ["Scrutiny analysis failed"],
-                "bloom_distribution": {},
-                "difficulty_distribution": {},
-                "has_scrutiny": False
-            }
-        
+
         response.append({
             "id": r.id,
             "teacher_username": r.tusername,
@@ -477,7 +458,7 @@ def COECandidates(request):
             "total_marks": r.total_marks,
             "syllabus_url": r.syllabus.url if r.syllabus else None,
             "q_pattern_url": r.q_pattern.url if r.q_pattern else None,
-            "scrutiny": scrutiny_data,
+            "scrutiny": scrutiny_payload,
         })
     return Response(response)
 

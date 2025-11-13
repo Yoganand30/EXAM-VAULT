@@ -47,7 +47,8 @@ SUB = (
     ('Internet of Things', 'Internet of Things'),
     ('Parallel Computing', 'Parallel Computing'),
     ('Cryptography', 'Cryptography'),
-    ('Big Data Analytics', 'Big Data Analytics')
+    ('Big Data Analytics', 'Big Data Analytics'),
+    ('MACHINE LEARNING', 'MACHINE LEARNING')
 )
 
 STATUS = (
